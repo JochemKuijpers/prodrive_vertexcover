@@ -5,6 +5,7 @@
 #include <ctime>
 #include <algorithm>
 
+// loads graph from one directory up: "../graph".
 void load_graph(std::vector<std::pair<int, int>>* pGraph) {
     std::ifstream input("../graph");
     std::string line;
@@ -15,15 +16,16 @@ void load_graph(std::vector<std::pair<int, int>>* pGraph) {
         u = std::stoi(line.substr(0, commaPosition));
         v = std::stoi(line.substr(commaPosition + 1, line.length() - commaPosition - 1));
         pGraph->push_back(std::make_pair(u, v));
-        pGraph->push_back(std::make_pair(v, u));
     }
 }
 
+// copies the graph so the copy can be modified without having to re-load the graph.
 std::vector<std::pair<int, int>> copy_graph(std::vector<std::pair<int, int>>* pGraph) {
     auto newGraph = *pGraph;
     return newGraph;
 }
 
+// check if the cover is better than we already found, and if so, output the cover.
 void report(bool cover[1993], int* bestCover) {
     int currentCover = 0;
     for (int i = 0; i < 1993; i++) if (cover[i]) currentCover++;
@@ -47,58 +49,76 @@ int main() {
     bool cover[1993];
     std::default_random_engine generator(static_cast<unsigned int>(std::time(0)));
 
-    long n = 0;
     while (true) {
-        n++;
-        if (n % 1000 == 0) { std::cout << n << " iterations... \n"; }
-        for (bool &i : cover) i = false;
-        auto graph = copy_graph(&readonly_graph);
-
-        while (!graph.empty()) {
-            std::uniform_int_distribution<int> distribution(0, graph.size() - 1);
-            int edge_idx = distribution(generator);
-            int u = graph[edge_idx].first;
-            int v = graph[edge_idx].second;
-
-            auto it = graph.begin();
-
-            cover[u] = true;
-            cover[v] = true;
-
-            while (it != graph.end()) {
-                if (it->first == u || it->first == v || it->second == u || it->second == v) {
-                    it = graph.erase(it);
-                } else {
-                    it++;
-                }
-            }
-        }
+        // initialize all cover booleans to true: everyone is in the cover at first.
+        for (bool &i : cover) i = true;
 
         report(cover, &bestCover);
 
-        // we can remove a vertex from the cover if all of its neighbors are in the cover
-        // however, since we're approximating the vertex cover, we want to do this in a randomized order
+        // The following transformations are applied in an arbitrary order to the vertices of the graph.
+        // To achieve this arbitrary ordering, we shuffle a list of vertex indices.
         int rnd_idx[1993];
         for (int i = 0; i < 1993; i++) rnd_idx[i] = i;
-        std::shuffle(rnd_idx, rnd_idx + 1993, generator);
 
-        for (int i = 0; i < 1993; i++) {
-            int v = rnd_idx[i];
-            // assume all of it's edges are covered by it's neighbors, if we find a counter_example, set to false
-            bool fully_covered = true;
+        // execute 2000 transformations:
+        for (int trans = 0; trans < 2000; trans++) {
+            // Transformation A:
+            // We can remove a vertex from the cover if all of its neighbors are in the cover.
+            std::shuffle(rnd_idx, rnd_idx + 1993, generator);
+            for (int i = 0; i < 1993; i++) {
+                int v = rnd_idx[i];
+                if (!cover[v]) { continue; }
 
-            for (auto const &edge : readonly_graph) {
-                if (edge.first == v && !cover[edge.second] || edge.second == v && !cover[edge.first]) {
-                    fully_covered = false;
+                bool fully_covered = true; // whether or not all neighbors are in the cover
+
+                for (auto const &edge : readonly_graph) {
+                    if ((edge.first == v && !cover[edge.second]) || (edge.second == v && !cover[edge.first])) {
+                        fully_covered = false; // set to false: our neighbor is not in the cover
+                        break;
+                    }
+                }
+
+                if (fully_covered) {
+                    cover[v] = false;
                 }
             }
 
-            if (fully_covered) {
-                cover[v] = false;
-            }
-        }
+            report(cover, &bestCover);
 
-        report(cover, &bestCover);
+            // Transformation B:
+            // If only one of the neighbors is not in the vertex cover, we can switch with that neighbor
+            // if only one of our neighbors is not in the vertex cover, we might switch with them to see if that helps...
+            std::shuffle(rnd_idx, rnd_idx + 1993, generator);
+            for (int i = 0; i < 1993; i++) {
+                int v = rnd_idx[i];
+                if (!cover[v]) { continue; }
+
+                int non_cover_neighbor = -1; // the index of the neighbor not in the cover
+                bool ignore = false; // set to true if more than one neighbors was not in the cover
+                for (auto const &edge : readonly_graph) {
+                    if (edge.first == v && !cover[edge.second]) {
+                        if (non_cover_neighbor < 0) {
+                            non_cover_neighbor = edge.second;
+                        } else {
+                            ignore = true; break;
+                        }
+                    } else if (edge.second == v && !cover[edge.first]) {
+                        if (non_cover_neighbor < 0) {
+                            non_cover_neighbor = edge.first;
+                        } else {
+                            ignore = true; break;
+                        }
+                    }
+                }
+
+                if (non_cover_neighbor > 0 && !ignore) {
+                    cover[v] = false;
+                    cover[non_cover_neighbor] = true;
+                }
+            }
+
+            report(cover, &bestCover);
+        }
     }
 
     return 0;
