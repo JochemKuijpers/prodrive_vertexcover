@@ -60,33 +60,11 @@ int main() {
         int rnd_idx[1993];
         for (int i = 0; i < 1993; i++) rnd_idx[i] = i;
 
-        // execute 2000 transformations:
-        for (int trans = 0; trans < 2000; trans++) {
-            // Transformation A:
-            // We can remove a vertex from the cover if all of its neighbors are in the cover.
-            std::shuffle(rnd_idx, rnd_idx + 1993, generator);
-            for (int i = 0; i < 1993; i++) {
-                int v = rnd_idx[i];
-                if (!cover[v]) { continue; }
+        std::cout << "--\n";
 
-                bool fully_covered = true; // whether or not all neighbors are in the cover
-
-                for (auto const &edge : readonly_graph) {
-                    if ((edge.first == v && !cover[edge.second]) || (edge.second == v && !cover[edge.first])) {
-                        fully_covered = false; // set to false: our neighbor is not in the cover
-                        break;
-                    }
-                }
-
-                if (fully_covered) {
-                    cover[v] = false;
-                }
-            }
-
-            report(cover, &bestCover);
-
-            // Transformation B:
-            // If only one of the neighbors is not in the vertex cover, we can switch with that neighbor
+        for (int trans = 0; trans < 10000; trans++) {
+            // If all neighbors are in the vertex cover, we can remove the center vertex from the cover.
+            // And if only one of the neighbors is not in the vertex cover, we can switch with that neighbor.
             std::shuffle(rnd_idx, rnd_idx + 1993, generator);
             for (int i = 0; i < 1993; i++) {
                 int v = rnd_idx[i];
@@ -110,9 +88,11 @@ int main() {
                     }
                 }
 
-                if (non_cover_neighbor > 0 && !ignore) {
+                if (non_cover_neighbor >= 0 && !ignore) {
                     cover[v] = false;
                     cover[non_cover_neighbor] = true;
+                } else if (non_cover_neighbor < 0) {
+                    cover[v] = false;
                 }
             }
 
