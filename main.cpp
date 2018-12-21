@@ -19,12 +19,6 @@ void load_graph(std::vector<std::pair<int, int>>* pGraph) {
     }
 }
 
-// copies the graph so the copy can be modified without having to re-load the graph.
-std::vector<std::pair<int, int>> copy_graph(std::vector<std::pair<int, int>>* pGraph) {
-    auto newGraph = *pGraph;
-    return newGraph;
-}
-
 // check if the cover is better than we already found, and if so, output the cover.
 void report(bool cover[1993], int* bestCover) {
     int currentCover = 0;
