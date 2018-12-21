@@ -87,7 +87,6 @@ int main() {
 
             // Transformation B:
             // If only one of the neighbors is not in the vertex cover, we can switch with that neighbor
-            // if only one of our neighbors is not in the vertex cover, we might switch with them to see if that helps...
             std::shuffle(rnd_idx, rnd_idx + 1993, generator);
             for (int i = 0; i < 1993; i++) {
                 int v = rnd_idx[i];
